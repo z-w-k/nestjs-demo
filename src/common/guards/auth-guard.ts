@@ -1,19 +1,23 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { FastifyRequest } from 'fastify';
-import { AuthService } from 'src/auth/auth.service';
 
+/**
+ * 占位守卫：在接入 AuthService / JWT 前默认拒绝。
+ * 需要鉴权时在 AppModule 注册并注入校验逻辑。
+ */
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private authService: AuthService) {}
-
-  async canActivate(context: ExecutionContext): Promise<boolean> {
+  canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
-    const token = this.extractToken(request);
-    const user = await this.authService.validateToken(token);
-    if (user) {
-      request.user = user;
-      return true;
-    }
+    this.extractToken(request);
     return false;
+  }
+
+  private extractToken(request: FastifyRequest): string | undefined {
+    const auth = request.headers.authorization;
+    if (!auth?.startsWith('Bearer ')) {
+      return undefined;
+    }
+    return auth.slice(7);
   }
 }
